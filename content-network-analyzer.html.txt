@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoNateAI Content Network Analyzer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --accent-primary: #00ff88;
+            --accent-secondary: #ff0066;
+            --accent-tertiary: #0088ff;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--bg-tertiary);
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--bg-tertiary);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+            color: var(--bg-primary);
+        }
+
+        .sidebar-header h3 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .sidebar-header p {
+            margin: 5px 0 0 0;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .control-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        .control-section h4 {
+            color: var(--accent-primary);
+            font-size: 1rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            background: var(--bg-tertiary);
+            border: 1px solid #404040;
+            color: var(--text-primary);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 0.2rem rgba(0, 255, 136, 0.25);
+            color: var(--text-primary);
+        }
+
+        .range-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .range-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-outline-primary {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .top-bar {
+            height: 60px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .info-panel {
+            background: var(--bg-secondary);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .info-item .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-item .value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .network-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #network-graph {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 255, 136, 0.03) 0%, transparent 50%);
+        }
+
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .node:hover {
+            stroke-width: 3px;
+        }
+
+        .node.selected {
+            stroke: var(--accent-secondary);
+            stroke-width: 4px;
+        }
+
+        .link {
+            stroke-opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+
+        .link.highlighted {
+            stroke-opacity: 1;
+            stroke-width: 3px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid var(--accent-primary);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            max-width: 300px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip h6 {
+            color: var(--accent-primary);
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 15px;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--bg-tertiary);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+            color: var(--bg-primary);
+            border-radius: 15px 15px 0 0;
+        }
+
+        .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--accent-primary);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-secondary);
+            background: rgba(255, 0, 102, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent-secondary);
+            background: rgba(255, 0, 102, 0.1);
+            transform: scale(1.02);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(26, 26, 26, 0.9);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .path-visualization {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid var(--accent-primary);
+            border-radius: 10px;
+            padding: 15px;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .path-step {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-primary);
+            font-size: 0.9rem;
+        }
+
+        .isolation-mode {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 102, 0.1);
+            border: 2px solid var(--accent-secondary);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                width: 300px;
+                z-index: 1001;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .info-panel {
+                margin: 0 10px;
+                padding: 10px 15px;
+            }
+
+            .info-item .value {
+                font-size: 1rem;
+            }
+
+            .legend {
+                bottom: 10px;
+                right: 10px;
+                font-size: 0.8rem;
+            }
+
+            .path-visualization {
+                top: 70px;
+                left: 10px;
+                max-width: calc(100% - 20px);
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .sidebar {
+                width: 300px;
+            }
+        }
+
+        .form-floating {
+            margin-bottom: 15px;
+        }
+
+        .form-floating label {
+            color: var(--text-muted);
+        }
+
+        .form-floating .form-control:focus ~ label,
+        .form-floating .form-control:not(:placeholder-shown) ~ label {
+            color: var(--accent-primary);
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            margin: 2px;
+        }
+
+        .tier-1 { color: #ff0066; }
+        .tier-2 { color: #00ff88; }
+        .tier-3 { color: #0088ff; }
+
+        .connection-strength-1 { stroke: rgba(0, 255, 136, 0.3); }
+        .connection-strength-2 { stroke: rgba(0, 255, 136, 0.6); }
+        .connection-strength-3 { stroke: rgba(0, 255, 136, 0.9); }
+
+        .search-highlight {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { stroke-opacity: 0.3; }
+            50% { stroke-opacity: 1; }
+            100% { stroke-opacity: 0.3; }
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .processing-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent-primary);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            z-index: 1002;
+            display: none;
+        }
+
+        .spinner {
+            border: 3px solid var(--bg-tertiary);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="overlay"></div>
+    <div class="processing-indicator" id="processingIndicator">
+        <div class="spinner"></div>
+        <div>Processing network data...</div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-project-diagram"></i> CONTENT NETWORK</h3>
+                <p>Advanced Content Analytics</p>
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="control-section">
+                <h4><i class="fas fa-upload"></i> Data Import</h4>
+                <div class="upload-zone" id="uploadZone">
+                    <i class="fas fa-cloud-upload-alt fa-2x mb-3" style="color: var(--accent-primary);"></i>
+                    <p><strong>Drop JSON file here</strong></p>
+                    <p class="text-muted mb-2">or click to browse</p>
+                    <small class="text-muted">Accepts: .json files</small>
+                    <input type="file" id="fileInput" accept=".json,application/json,text/plain" multiple="false" style="display: none;">
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#addContentModal">
+                        <i class="fas fa-plus"></i> Add New Content
+                    </button>
+                </div>
+            </div>
+
+            <!-- Network Controls -->
+            <div class="control-section">
+                <h4><i class="fas fa-sliders-h"></i> Network Controls</h4>
+                
+                <div class="control-group">
+                    <label for="viewAngle">View Angle</label>
+                    <input type="range" class="range-slider" id="viewAngle" min="0" max="360" value="0">
+                </div>
+
+                <div class="control-group">
+                    <label for="zoomLevel">Zoom Level</label>
+                    <input type="range" class="range-slider" id="zoomLevel" min="0.1" max="3" step="0.1" value="1">
+                </div>
+
+                <div class="control-group">
+                    <label for="connectionType">Connection Type</label>
+                    <select class="form-select" id="connectionType">
+                        <option value="strength">Connection Strength</option>
+                        <option value="keywords">Keyword Similarity</option>
+                        <option value="audience">Audience Overlap</option>
+                        <option value="topics">Topic Clustering</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="nodeSizeBy">Node Size By</label>
+                    <select class="form-select" id="nodeSizeBy">
+                        <option value="shareability">Shareability Score</option>
+                        <option value="engagement">Engagement Potential</option>
+                        <option value="searchVolume">Search Volume</option>
+                        <option value="difficulty">SEO Difficulty</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="layoutStyle">Layout Style</label>
+                    <select class="form-select" id="layoutStyle">
+                        <option value="force">Force-Directed</option>
+                        <option value="circular">Circular</option>
+                        <option value="hierarchical">Hierarchical</option>
+                        <option value="cluster">Topic Clusters</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="control-section">
+                <h4><i class="fas fa-filter"></i> Advanced Filters</h4>
+                
+                <div class="control-group">
+                    <label for="searchFilter">Search Content</label>
+                    <input type="text" class="form-control" id="searchFilter" placeholder="Search titles, keywords...">
+                </div>
+
+                <div class="control-group">
+                    <label for="categoryFilter">Interest Sections</label>
+                    <select class="form-select" id="categoryFilter" multiple>
+                        <option value="all">All Categories</option>
+                        <option value="Psychology/Neuroscience">Psychology/Neuroscience</option>
+                        <option value="AI/Technology">AI/Technology</option>
+                        <option value="Business Strategy">Business Strategy</option>
+                        <option value="Personal Development">Personal Development</option>
+                        <option value="Cultural Analysis">Cultural Analysis</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="shareabilityRange">Shareability Score</label>
+                    <input type="range" class="range-slider" id="shareabilityRange" min="1" max="10" value="1">
+                    <small class="text-muted">Min: <span id="shareabilityValue">1</span>/10</small>
+                </div>
+
+                <div class="control-group">
+                    <label for="engagementRange">Engagement Potential</label>
+                    <input type="range" class="range-slider" id="engagementRange" min="1" max="10" value="1">
+                    <small class="text-muted">Min: <span id="engagementValue">1</span>/10</small>
+                </div>
+            </div>
+
+            <!-- Analysis Tools -->
+            <div class="control-section">
+                <h4><i class="fas fa-analytics"></i> Analysis Tools</h4>
+                
+                <button class="btn btn-primary btn-sm w-100 mb-2" id="findPathsBtn">
+                    <i class="fas fa-route"></i> Find Content Paths
+                </button>
+                
+                <button class="btn btn-primary btn-sm w-100 mb-2" id="keywordAnalysisBtn">
+                    <i class="fas fa-tags"></i> Keyword Clusters
+                </button>
+                
+                <button class="btn btn-primary btn-sm w-100 mb-2" id="contentGapsBtn">
+                    <i class="fas fa-search"></i> Find Content Gaps
+                </button>
+                
+                <button class="btn btn-outline-primary btn-sm w-100" id="exportBtn">
+                    <i class="fas fa-download"></i> Export Analysis
+                </button>
+            </div>
+
+            <!-- Network Isolation -->
+            <div class="control-section">
+                <div class="d-grid">
+                    <button class="btn btn-outline-danger btn-sm" id="isolationBtn">
+                        <i class="fas fa-project-diagram"></i> ENTER ISOLATION MODE
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <button class="mobile-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="info-panel">
+                    <div class="info-item">
+                        <div class="label">Content Pieces</div>
+                        <div class="value" id="totalNodes">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Connections</div>
+                        <div class="value" id="totalConnections">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Avg Shareability</div>
+                        <div class="value" id="avgShareability">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Selected</div>
+                        <div class="value" id="selectedNode">None</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Visualization -->
+            <div class="network-container">
+                <svg id="network-graph"></svg>
+                
+                <!-- Legend -->
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color tier-1"></div>
+                        <span>High Impact (9-10)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color tier-2"></div>
+                        <span>Medium Impact (6-8)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color tier-3"></div>
+                        <span>Standard Impact (1-5)</span>
+                    </div>
+                </div>
+
+                <!-- Path Visualization -->
+                <div class="path-visualization" id="pathVisualization">
+                    <h6><i class="fas fa-route"></i> Content Journey</h6>
+                    <div id="pathSteps"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Content Modal -->
+    <div class="modal fade" id="addContentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus"></i> Add New Content</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addContentForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="newTitle" placeholder="Blog Title" required>
+                                    <label for="newTitle">Blog Title</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="newSubtitle" placeholder="Subtitle">
+                                    <label for="newSubtitle">Subtitle</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-floating">
+                            <textarea class="form-control" id="newThesis" placeholder="Core Thesis" style="height: 80px;" required></textarea>
+                            <label for="newThesis">Core Thesis</label>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="number" class="form-control" id="newShareability" min="1" max="10" placeholder="Shareability" required>
+                                    <label for="newShareability">Shareability Score (1-10)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="number" class="form-control" id="newEngagement" min="1" max="10" placeholder="Engagement" required>
+                                    <label for="newEngagement">Engagement Potential (1-10)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="number" class="form-control" id="newDifficulty" min="1" max="10" placeholder="SEO Difficulty" required>
+                                    <label for="newDifficulty">SEO Difficulty (1-10)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="newKeywords" placeholder="Keywords (comma-separated)">
+                                    <label for="newKeywords">Keywords (comma-separated)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select" id="newCategories" multiple>
+                                        <option value="Psychology/Neuroscience">Psychology/Neuroscience</option>
+                                        <option value="AI/Technology">AI/Technology</option>
+                                        <option value="Business Strategy">Business Strategy</option>
+                                        <option value="Personal Development">Personal Development</option>
+                                        <option value="Cultural Analysis">Cultural Analysis</option>
+                                    </select>
+                                    <label for="newCategories">Interest Sections</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-floating">
+                            <textarea class="form-control" id="newAudience" placeholder="Target audience description" style="height: 60px;"></textarea>
+                            <label for="newAudience">Target Audience</label>
+                        </div>
+
+                        <div class="form-floating">
+                            <textarea class="form-control" id="newPainPoints" placeholder="Pain points (comma-separated)" style="height: 60px;"></textarea>
+                            <label for="newPainPoints">Pain Points Addressed</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveContentBtn">
+                        <i class="fas fa-save"></i> Add Content
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ContentNetworkAnalyzer {
+            constructor() {
+                this.data = null;
+                this.nodes = [];
+                this.links = [];
+                this.svg = null;
+                this.simulation = null;
+                this.selectedNode = null;
+                this.tooltip = null;
+                this.isolationMode = false;
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.setupVisualization();
+                this.setupTooltip();
+                this.updateRangeDisplays();
+            }
+
+            setupEventListeners() {
+                // File upload with better debugging
+                const uploadZone = document.getElementById('uploadZone');
+                const fileInput = document.getElementById('fileInput');
+                
+                if (uploadZone && fileInput) {
+                    uploadZone.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        console.log('Upload zone clicked, opening file dialog...');
+                        fileInput.click();
+                    });
+                    
+                    fileInput.addEventListener('change', (e) => {
+                        console.log('File input changed:', e.target.files);
+                        this.handleFileUpload(e);
+                    });
+                } else {
+                    console.error('Upload elements not found:', { uploadZone, fileInput });
+                }
+                // Drag and drop with better debugging
+                if (uploadZone) {
+                    uploadZone.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        uploadZone.classList.add('dragover');
+                        console.log('Dragging over upload zone');
+                    });
+                    
+                    uploadZone.addEventListener('dragleave', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        uploadZone.classList.remove('dragover');
+                    });
+                    
+                    uploadZone.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        uploadZone.classList.remove('dragover');
+                        const files = e.dataTransfer.files;
+                        console.log('Files dropped:', files);
+                        if (files.length > 0) {
+                            this.processFile(files[0]);
+                        }
+                    });
+                }
+
+                // Controls
+                const controls = ['viewAngle', 'zoomLevel', 'connectionType', 'nodeSizeBy', 'layoutStyle'];
+                controls.forEach(controlId => {
+                    const element = document.getElementById(controlId);
+                    if (element) {
+                        element.addEventListener('change', () => this.updateVisualization());
+                    }
+                });
+
+                // Filters
+                const searchFilter = document.getElementById('searchFilter');
+                if (searchFilter) {
+                    searchFilter.addEventListener('input', () => this.applyFilters());
+                }
+                
+                const filters = ['categoryFilter', 'shareabilityRange', 'engagementRange'];
+                filters.forEach(filterId => {
+                    const element = document.getElementById(filterId);
+                    if (element) {
+                        element.addEventListener('change', () => this.applyFilters());
+                    }
+                });
+
+                // Range sliders
+                const shareabilityRange = document.getElementById('shareabilityRange');
+                const engagementRange = document.getElementById('engagementRange');
+                
+                if (shareabilityRange) {
+                    shareabilityRange.addEventListener('input', (e) => {
+                        document.getElementById('shareabilityValue').textContent = e.target.value;
+                        this.applyFilters();
+                    });
+                }
+                
+                if (engagementRange) {
+                    engagementRange.addEventListener('input', (e) => {
+                        document.getElementById('engagementValue').textContent = e.target.value;
+                        this.applyFilters();
+                    });
+                }
+
+                // Analysis tools
+                const analysisButtons = [
+                    ['findPathsBtn', () => this.findContentPaths()],
+                    ['keywordAnalysisBtn', () => this.analyzeKeywords()],
+                    ['contentGapsBtn', () => this.findContentGaps()],
+                    ['exportBtn', () => this.exportAnalysis()],
+                    ['isolationBtn', () => this.toggleIsolation()]
+                ];
+                
+                analysisButtons.forEach(([id, handler]) => {
+                    const button = document.getElementById(id);
+                    if (button) {
+                        button.addEventListener('click', handler);
+                    }
+                });
+
+                // Mobile toggle
+                const mobileToggle = document.getElementById('mobileToggle');
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('overlay');
+                
+                if (mobileToggle && sidebar && overlay) {
+                    mobileToggle.addEventListener('click', () => {
+                        sidebar.classList.toggle('open');
+                        overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+                    });
+
+                    overlay.addEventListener('click', () => {
+                        sidebar.classList.remove('open');
+                        overlay.style.display = 'none';
+                    });
+                }
+
+                // Add content modal
+                const saveContentBtn = document.getElementById('saveContentBtn');
+                if (saveContentBtn) {
+                    saveContentBtn.addEventListener('click', () => this.addNewContent());
+                }
+
+                // Window resize
+                window.addEventListener('resize', () => this.resizeVisualization());
+            }
+
+            setupVisualization() {
+                const container = $('#network-graph');
+                const width = container.width();
+                const height = container.height();
+
+                this.svg = d3.select('#network-graph')
+                    .attr('width', width)
+                    .attr('height', height);
+
+                // Add zoom behavior
+                const zoom = d3.zoom()
+                    .scaleExtent([0.1, 3])
+                    .on('zoom', (event) => {
+                        d3.select('#network-graph g').attr('transform', event.transform);
+                    });
+
+                this.svg.call(zoom);
+
+                // Create main group
+                this.svg.append('g');
+
+                // Setup force simulation
+                this.simulation = d3.forceSimulation()
+                    .force('link', d3.forceLink().id(d => d.id).distance(100))
+                    .force('charge', d3.forceManyBody().strength(-300))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('collision', d3.forceCollide().radius(d => this.getNodeRadius(d) + 5));
+            }
+
+            setupTooltip() {
+                this.tooltip = d3.select('body')
+                    .append('div')
+                    .attr('class', 'tooltip')
+                    .style('opacity', 0);
+            }
+
+            updateRangeDisplays() {
+                const shareabilityValue = document.getElementById('shareabilityValue');
+                const engagementValue = document.getElementById('engagementValue');
+                const shareabilityRange = document.getElementById('shareabilityRange');
+                const engagementRange = document.getElementById('engagementRange');
+                
+                if (shareabilityValue && shareabilityRange) {
+                    shareabilityValue.textContent = shareabilityRange.value;
+                }
+                if (engagementValue && engagementRange) {
+                    engagementValue.textContent = engagementRange.value;
+                }
+            }
+
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                console.log('File selected:', file);
+                if (file) {
+                    console.log('Processing file:', file.name, 'Type:', file.type, 'Size:', file.size);
+                    this.processFile(file);
+                } else {
+                    console.log('No file selected');
+                }
+            }
+
+            processFile(file) {
+                // More flexible file type checking
+                const fileName = file.name.toLowerCase();
+                const isJsonFile = fileName.endsWith('.json') || file.type === 'application/json' || file.type === 'text/plain';
+                
+                if (!isJsonFile) {
+                    alert('Please upload a JSON file. Selected file: ' + file.name + ' (Type: ' + file.type + ')');
+                    return;
+                }
+
+                this.showProcessingIndicator();
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        console.log('JSON data loaded successfully:', jsonData);
+                        this.loadData(jsonData);
+                    } catch (error) {
+                        console.error('JSON parsing error:', error);
+                        alert('Error parsing JSON file: ' + error.message + '\n\nPlease check that your file contains valid JSON.');
+                    } finally {
+                        this.hideProcessingIndicator();
+                    }
+                };
+                
+                reader.onerror = (error) => {
+                    console.error('File reading error:', error);
+                    alert('Error reading file: ' + error.message);
+                    this.hideProcessingIndicator();
+                };
+                
+                reader.readAsText(file);
+            }
+
+            loadData(data) {
+                this.data = data;
+                this.processData();
+                this.updateVisualization();
+                this.updateStats();
+            }
+
+            processData() {
+                if (!this.data || !this.data.blog_ideas) {
+                    return;
+                }
+
+                // Create nodes
+                this.nodes = this.data.blog_ideas.map(blog => ({
+                    id: blog.blog_id,
+                    title: blog.title,
+                    subtitle: blog.subtitle,
+                    thesis: blog.core_thesis,
+                    shareability: parseInt(blog.engagement_predictions.shareability_score.split('/')[0]),
+                    engagement: parseInt(blog.engagement_predictions.comment_potential.split('/')[0]),
+                    bookmark: parseInt(blog.engagement_predictions.bookmark_likelihood.split('/')[0]),
+                    viral: parseInt(blog.engagement_predictions.viral_potential.split('/')[0]),
+                    categories: blog.target_interest_sections,
+                    keywords: blog.keyword_strategy.high_volume_keywords.concat(blog.keyword_strategy.long_tail_keywords),
+                    audience: blog.target_audience.primary,
+                    painPoints: blog.pain_points_mitigated,
+                    searchVolume: blog.search_volume_analysis.estimated_monthly_searches,
+                    difficulty: parseInt(blog.success_metrics.seo_difficulty.split('/')[0]),
+                    readTime: blog.success_metrics.expected_read_time,
+                    insights: blog.insights_dropped,
+                    skills: blog.skills_taught,
+                    monetization: blog.monetization_opportunities,
+                    ...blog
+                }));
+
+                // Create links based on connections
+                this.links = this.generateConnections();
+            }
+
+            generateConnections() {
+                const links = [];
+                const connectionType = $('#connectionType').val();
+
+                for (let i = 0; i < this.nodes.length; i++) {
+                    for (let j = i + 1; j < this.nodes.length; j++) {
+                        const nodeA = this.nodes[i];
+                        const nodeB = this.nodes[j];
+                        
+                        let strength = 0;
+                        
+                        switch (connectionType) {
+                            case 'keywords':
+                                strength = this.calculateKeywordSimilarity(nodeA, nodeB);
+                                break;
+                            case 'audience':
+                                strength = this.calculateAudienceOverlap(nodeA, nodeB);
+                                break;
+                            case 'topics':
+                                strength = this.calculateTopicSimilarity(nodeA, nodeB);
+                                break;
+                            default:
+                                strength = this.calculateOverallStrength(nodeA, nodeB);
+                        }
+
+                        if (strength > 0.3) { // Threshold for connection
+                            links.push({
+                                source: nodeA.id,
+                                target: nodeB.id,
+                                strength: strength,
+                                type: connectionType
+                            });
+                        }
+                    }
+                }
+
+                return links;
+            }
+
+            calculateKeywordSimilarity(nodeA, nodeB) {
+                const keywordsA = new Set(nodeA.keywords.map(k => k.toLowerCase()));
+                const keywordsB = new Set(nodeB.keywords.map(k => k.toLowerCase()));
+                
+                const intersection = new Set([...keywordsA].filter(x => keywordsB.has(x)));
+                const union = new Set([...keywordsA, ...keywordsB]);
+                
+                return intersection.size / union.size;
+            }
+
+            calculateAudienceOverlap(nodeA, nodeB) {
+                const audienceA = nodeA.audience.toLowerCase();
+                const audienceB = nodeB.audience.toLowerCase();
+                
+                // Simple text similarity - in a real app, this would be more sophisticated
+                const wordsA = audienceA.split(' ');
+                const wordsB = audienceB.split(' ');
+                
+                const commonWords = wordsA.filter(word => wordsB.includes(word));
+                return commonWords.length / Math.max(wordsA.length, wordsB.length);
+            }
+
+            calculateTopicSimilarity(nodeA, nodeB) {
+                const categoriesA = new Set(nodeA.categories);
+                const categoriesB = new Set(nodeB.categories);
+                
+                const intersection = new Set([...categoriesA].filter(x => categoriesB.has(x)));
+                const union = new Set([...categoriesA, ...categoriesB]);
+                
+                return intersection.size / union.size;
+            }
+
+            calculateOverallStrength(nodeA, nodeB) {
+                const keywordSim = this.calculateKeywordSimilarity(nodeA, nodeB);
+                const audienceSim = this.calculateAudienceOverlap(nodeA, nodeB);
+                const topicSim = this.calculateTopicSimilarity(nodeA, nodeB);
+                
+                return (keywordSim * 0.4 + audienceSim * 0.3 + topicSim * 0.3);
+            }
+
+            updateVisualization() {
+                if (!this.nodes.length) return;
+
+                const svg = d3.select('#network-graph g');
+                svg.selectAll('*').remove();
+
+                // Apply current filters
+                const filteredData = this.getFilteredData();
+
+                // Update simulation
+                this.simulation
+                    .nodes(filteredData.nodes)
+                    .force('link').links(filteredData.links);
+
+                // Create links
+                const link = svg.selectAll('.link')
+                    .data(filteredData.links)
+                    .enter().append('line')
+                    .attr('class', d => `link connection-strength-${Math.ceil(d.strength * 3)}`)
+                    .attr('stroke-width', d => Math.sqrt(d.strength * 5));
+
+                // Create nodes
+                const node = svg.selectAll('.node')
+                    .data(filteredData.nodes)
+                    .enter().append('circle')
+                    .attr('class', 'node')
+                    .attr('r', d => this.getNodeRadius(d))
+                    .attr('fill', d => this.getNodeColor(d))
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 2)
+                    .on('mouseover', (event, d) => this.showTooltip(event, d))
+                    .on('mouseout', () => this.hideTooltip())
+                    .on('click', (event, d) => this.selectNode(d))
+                    .call(d3.drag()
+                        .on('start', (event, d) => this.dragStarted(event, d))
+                        .on('drag', (event, d) => this.dragged(event, d))
+                        .on('end', (event, d) => this.dragEnded(event, d)));
+
+                // Add labels
+                const labels = svg.selectAll('.label')
+                    .data(filteredData.nodes)
+                    .enter().append('text')
+                    .attr('class', 'label')
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '.35em')
+                    .attr('font-size', '10px')
+                    .attr('fill', '#ffffff')
+                    .attr('font-weight', 'bold')
+                    .text(d => d.title.length > 20 ? d.title.substring(0, 20) + '...' : d.title);
+
+                // Update positions
+                this.simulation.on('tick', () => {
+                    link
+                        .attr('x1', d => d.source.x)
+                        .attr('y1', d => d.source.y)
+                        .attr('x2', d => d.target.x)
+                        .attr('y2', d => d.target.y);
+
+                    node
+                        .attr('cx', d => d.x)
+                        .attr('cy', d => d.y);
+
+                    labels
+                        .attr('x', d => d.x)
+                        .attr('y', d => d.y + this.getNodeRadius(d) + 15);
+                });
+
+                this.simulation.alpha(1).restart();
+            }
+
+            getFilteredData() {
+                let filteredNodes = [...this.nodes];
+                let filteredLinks = [...this.links];
+
+                // Search filter
+                const searchFilter = document.getElementById('searchFilter');
+                const searchTerm = searchFilter ? searchFilter.value.toLowerCase() : '';
+                if (searchTerm) {
+                    filteredNodes = filteredNodes.filter(node => 
+                        node.title.toLowerCase().includes(searchTerm) ||
+                        node.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm))
+                    );
+                }
+
+                // Category filter
+                const categoryFilter = document.getElementById('categoryFilter');
+                const selectedCategories = categoryFilter ? Array.from(categoryFilter.selectedOptions).map(opt => opt.value) : [];
+                if (selectedCategories && selectedCategories.length > 0 && !selectedCategories.includes('all')) {
+                    filteredNodes = filteredNodes.filter(node => 
+                        node.categories.some(cat => selectedCategories.includes(cat))
+                    );
+                }
+
+                // Shareability filter
+                const shareabilityRange = document.getElementById('shareabilityRange');
+                const minShareability = shareabilityRange ? parseInt(shareabilityRange.value) : 1;
+                filteredNodes = filteredNodes.filter(node => node.shareability >= minShareability);
+
+                // Engagement filter
+                const engagementRange = document.getElementById('engagementRange');
+                const minEngagement = engagementRange ? parseInt(engagementRange.value) : 1;
+                filteredNodes = filteredNodes.filter(node => node.engagement >= minEngagement);
+
+                // Filter links to only include connections between visible nodes
+                const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
+                filteredLinks = filteredLinks.filter(link => 
+                    visibleNodeIds.has(link.source.id || link.source) && 
+                    visibleNodeIds.has(link.target.id || link.target)
+                );
+
+                return { nodes: filteredNodes, links: filteredLinks };
+            }
+
+            getNodeRadius(node) {
+                const nodeSizeBy = document.getElementById('nodeSizeBy');
+                const sizeBy = nodeSizeBy ? nodeSizeBy.value : 'shareability';
+                let value;
+                
+                switch (sizeBy) {
+                    case 'engagement':
+                        value = node.engagement;
+                        break;
+                    case 'searchVolume':
+                        // Parse search volume (e.g., "15K-30K" -> 22.5)
+                        const volumes = node.searchVolume.match(/(\d+)K?-(\d+)K?/);
+                        value = volumes ? (parseInt(volumes[1]) + parseInt(volumes[2])) / 2 : 5;
+                        value = Math.min(value / 10, 10); // Normalize to 1-10 scale
+                        break;
+                    case 'difficulty':
+                        value = 11 - node.difficulty; // Invert so easier content is larger
+                        break;
+                    default:
+                        value = node.shareability;
+                }
+                
+                return Math.max(8, Math.min(25, value * 2.5));
+            }
+
+            getNodeColor(node) {
+                const avgScore = (node.shareability + node.engagement + node.bookmark + node.viral) / 4;
+                
+                if (avgScore >= 8) return '#ff0066'; // Tier 1 - High impact
+                if (avgScore >= 6) return '#00ff88'; // Tier 2 - Medium impact
+                return '#0088ff'; // Tier 3 - Standard impact
+            }
+
+            showTooltip(event, node) {
+                const avgScore = (node.shareability + node.engagement + node.bookmark + node.viral) / 4;
+                
+                this.tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                    
+                this.tooltip.html(`
+                    <h6>${node.title}</h6>
+                    <strong>Average Score:</strong> ${avgScore.toFixed(1)}/10<br>
+                    <strong>Shareability:</strong> ${node.shareability}/10<br>
+                    <strong>Engagement:</strong> ${node.engagement}/10<br>
+                    <strong>Categories:</strong> ${node.categories.join(', ')}<br>
+                    <strong>Search Volume:</strong> ${node.searchVolume}<br>
+                    <strong>SEO Difficulty:</strong> ${node.difficulty}/10
+                `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            }
+
+            hideTooltip() {
+                this.tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            }
+
+            selectNode(node) {
+                // Update selected node
+                this.selectedNode = node;
+                const selectedNodeElement = document.getElementById('selectedNode');
+                if (selectedNodeElement) {
+                    selectedNodeElement.textContent = node.title.substring(0, 15) + '...';
+                }
+
+                // Highlight connected nodes and links
+                d3.selectAll('.node').classed('selected', false);
+                d3.selectAll('.link').classed('highlighted', false);
+
+                d3.selectAll('.node')
+                    .filter(d => d.id === node.id)
+                    .classed('selected', true);
+
+                // Highlight connections
+                const connectedLinks = this.links.filter(link => 
+                    link.source.id === node.id || link.target.id === node.id
+                );
+                
+                d3.selectAll('.link')
+                    .filter(d => connectedLinks.includes(d))
+                    .classed('highlighted', true);
+
+                // Show detailed information
+                this.showNodeDetails(node);
+            }
+
+            showNodeDetails(node) {
+                // This could open a detailed panel or modal
+                console.log('Selected node details:', node);
+            }
+
+            dragStarted(event, d) {
+                if (!event.active) this.simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            dragEnded(event, d) {
+                if (!event.active) this.simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+
+            applyFilters() {
+                this.updateVisualization();
+                this.updateStats();
+            }
+
+            updateStats() {
+                const filteredData = this.getFilteredData();
+                
+                const totalNodes = document.getElementById('totalNodes');
+                const totalConnections = document.getElementById('totalConnections');
+                const avgShareability = document.getElementById('avgShareability');
+                
+                if (totalNodes) totalNodes.textContent = filteredData.nodes.length;
+                if (totalConnections) totalConnections.textContent = filteredData.links.length;
+                
+                const avgShareabilityValue = filteredData.nodes.length > 0 ? 
+                    filteredData.nodes.reduce((sum, node) => sum + node.shareability, 0) / filteredData.nodes.length : 0;
+                if (avgShareability) avgShareability.textContent = avgShareabilityValue.toFixed(1);
+            }
+
+            findContentPaths() {
+                if (!this.selectedNode) {
+                    alert('Please select a node first to find content paths.');
+                    return;
+                }
+
+                // Find paths from selected node using BFS
+                const paths = this.findAllPaths(this.selectedNode.id, 3); // Max depth of 3
+                this.showContentPaths(paths);
+            }
+
+            findAllPaths(startNodeId, maxDepth) {
+                const paths = [];
+                const visited = new Set();
+                
+                const dfs = (currentPath, depth) => {
+                    if (depth >= maxDepth) return;
+                    
+                    const currentNodeId = currentPath[currentPath.length - 1];
+                    const connectedLinks = this.links.filter(link => 
+                        (link.source.id || link.source) === currentNodeId || 
+                        (link.target.id || link.target) === currentNodeId
+                    );
+                    
+                    connectedLinks.forEach(link => {
+                        const nextNodeId = (link.source.id || link.source) === currentNodeId ? 
+                            (link.target.id || link.target) : (link.source.id || link.source);
+                        
+                        if (!currentPath.includes(nextNodeId)) {
+                            const newPath = [...currentPath, nextNodeId];
+                            paths.push(newPath);
+                            dfs(newPath, depth + 1);
+                        }
+                    });
+                };
+                
+                dfs([startNodeId], 0);
+                return paths;
+            }
+
+            showContentPaths(paths) {
+                const pathViz = document.getElementById('pathVisualization');
+                const pathSteps = document.getElementById('pathSteps');
+                
+                if (!pathViz || !pathSteps) return;
+                
+                pathSteps.innerHTML = '';
+                
+                paths.slice(0, 5).forEach((path, index) => {
+                    const pathDiv = document.createElement('div');
+                    pathDiv.className = 'path-step';
+                    const pathText = path.map(nodeId => {
+                        const node = this.nodes.find(n => n.id === nodeId);
+                        return node ? node.title.substring(0, 30) + '...' : 'Unknown';
+                    }).join(' → ');
+                    
+                    pathDiv.textContent = `Path ${index + 1}: ${pathText}`;
+                    pathSteps.appendChild(pathDiv);
+                });
+                
+                pathViz.style.display = 'block';
+                
+                setTimeout(() => {
+                    pathViz.style.display = 'none';
+                }, 10000);
+            }
+
+            analyzeKeywords() {
+                // Analyze keyword clusters
+                const keywordFreq = {};
+                
+                this.nodes.forEach(node => {
+                    node.keywords.forEach(keyword => {
+                        const key = keyword.toLowerCase();
+                        keywordFreq[key] = (keywordFreq[key] || 0) + 1;
+                    });
+                });
+                
+                const topKeywords = Object.entries(keywordFreq)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 10);
+                
+                alert('Top Keywords:\n' + topKeywords.map(([keyword, count]) => 
+                    `${keyword}: ${count} posts`
+                ).join('\n'));
+            }
+
+            findContentGaps() {
+                // Identify potential content gaps
+                const categories = {};
+                
+                this.nodes.forEach(node => {
+                    node.categories.forEach(cat => {
+                        categories[cat] = (categories[cat] || 0) + 1;
+                    });
+                });
+                
+                const categoryAnalysis = Object.entries(categories)
+                    .sort(([,a], [,b]) => a - b)
+                    .map(([cat, count]) => `${cat}: ${count} posts`);
+                
+                alert('Content Distribution by Category:\n' + categoryAnalysis.join('\n') + 
+                      '\n\nConsider creating more content in categories with fewer posts.');
+            }
+
+            exportAnalysis() {
+                const analysis = {
+                    totalNodes: this.nodes.length,
+                    totalConnections: this.links.length,
+                    nodes: this.getFilteredData().nodes,
+                    links: this.getFilteredData().links,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(analysis, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'content-network-analysis.json';
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            }
+
+            toggleIsolation() {
+                this.isolationMode = !this.isolationMode;
+                
+                const isolationBtn = document.getElementById('isolationBtn');
+                const networkContainer = document.querySelector('.network-container');
+                
+                if (this.isolationMode) {
+                    if (isolationBtn) {
+                        isolationBtn.innerHTML = '<i class="fas fa-times"></i> EXIT ISOLATION MODE';
+                    }
+                    
+                    // Add isolation mode indicator
+                    const isolationDiv = document.createElement('div');
+                    isolationDiv.className = 'isolation-mode';
+                    isolationDiv.innerHTML = '<h4>ISOLATION MODE ACTIVE</h4><p>Focus on core connections</p>';
+                    if (networkContainer) {
+                        networkContainer.appendChild(isolationDiv);
+                    }
+                    
+                    // Filter to show only strongest connections
+                    this.links = this.links.filter(link => link.strength > 0.7);
+                    this.updateVisualization();
+                } else {
+                    if (isolationBtn) {
+                        isolationBtn.innerHTML = '<i class="fas fa-project-diagram"></i> ENTER ISOLATION MODE';
+                    }
+                    
+                    // Remove isolation mode indicator
+                    const isolationMode = document.querySelector('.isolation-mode');
+                    if (isolationMode) {
+                        isolationMode.remove();
+                    }
+                    
+                    // Restore all connections
+                    this.links = this.generateConnections();
+                    this.updateVisualization();
+                }
+            }
+
+            addNewContent() {
+                const getElementValue = (id) => {
+                    const element = document.getElementById(id);
+                    return element ? element.value : '';
+                };
+                
+                const getSelectedOptions = (id) => {
+                    const element = document.getElementById(id);
+                    return element ? Array.from(element.selectedOptions).map(opt => opt.value) : [];
+                };
+
+                const newContent = {
+                    blog_id: this.nodes.length + 1,
+                    title: getElementValue('newTitle'),
+                    subtitle: getElementValue('newSubtitle'),
+                    core_thesis: getElementValue('newThesis'),
+                    target_interest_sections: getSelectedOptions('newCategories'),
+                    keyword_strategy: {
+                        high_volume_keywords: getElementValue('newKeywords').split(',').map(k => k.trim()).filter(k => k),
+                        long_tail_keywords: []
+                    },
+                    target_audience: {
+                        primary: getElementValue('newAudience')
+                    },
+                    pain_points_mitigated: getElementValue('newPainPoints').split(',').map(p => p.trim()).filter(p => p),
+                    engagement_predictions: {
+                        shareability_score: getElementValue('newShareability') + '/10',
+                        comment_potential: getElementValue('newEngagement') + '/10',
+                        bookmark_likelihood: getElementValue('newEngagement') + '/10',
+                        viral_potential: getElementValue('newEngagement') + '/10'
+                    },
+                    search_volume_analysis: {
+                        estimated_monthly_searches: '10K-20K'
+                    },
+                    success_metrics: {
+                        seo_difficulty: getElementValue('newDifficulty') + '/10',
+                        expected_read_time: '8-10 minutes'
+                    },
+                    insights_dropped: [],
+                    skills_taught: [],
+                    monetization_opportunities: []
+                };
+
+                // Validate required fields
+                if (!newContent.title || !newContent.core_thesis) {
+                    alert('Please fill in all required fields (Title and Core Thesis).');
+                    return;
+                }
+
+                // Add to data
+                if (!this.data) {
+                    this.data = { blog_ideas: [] };
+                }
+                this.data.blog_ideas.push(newContent);
+                this.processData();
+                this.updateVisualization();
+                this.updateStats();
+
+                // Close modal and reset form
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addContentModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                const form = document.getElementById('addContentForm');
+                if (form) {
+                    form.reset();
+                }
+
+                alert('New content added successfully!');
+            }
+
+            resizeVisualization() {
+                const container = $('#network-graph');
+                const width = container.width();
+                const height = container.height();
+
+                this.svg
+                    .attr('width', width)
+                    .attr('height', height);
+
+                this.simulation
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .alpha(1)
+                    .restart();
+            }
+
+            showProcessingIndicator() {
+                const indicator = document.getElementById('processingIndicator');
+                const overlay = document.getElementById('overlay');
+                if (indicator) indicator.style.display = 'block';
+                if (overlay) overlay.style.display = 'block';
+            }
+
+            hideProcessingIndicator() {
+                const indicator = document.getElementById('processingIndicator');
+                const overlay = document.getElementById('overlay');
+                if (indicator) indicator.style.display = 'none';
+                if (overlay) overlay.style.display = 'none';
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new ContentNetworkAnalyzer();
+        });
+    </script>
+</body>
+</html>
