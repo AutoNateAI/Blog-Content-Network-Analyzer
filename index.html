@@ -523,9 +523,8 @@
                 <div class="upload-zone" id="uploadZone">
                     <i class="fas fa-cloud-upload-alt fa-2x mb-3" style="color: var(--accent-primary);"></i>
                     <p><strong>Drop JSON file here</strong></p>
-                    <p class="text-muted mb-2">or click to browse</p>
-                    <small class="text-muted">Accepts: .json files</small>
-                    <input type="file" id="fileInput" accept=".json,application/json,text/plain" multiple="false" style="display: none;">
+                    <p class="text-muted mb-0">or click to browse</p>
+                    <input type="file" id="fileInput" accept=".json" style="display: none;">
                 </div>
                 <div class="mt-3">
                     <button class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#addContentModal">
@@ -816,50 +815,39 @@
             }
 
             setupEventListeners() {
-                // File upload with better debugging
-                const uploadZone = document.getElementById('uploadZone');
-                const fileInput = document.getElementById('fileInput');
+                // File upload
+                document.getElementById('uploadZone').addEventListener('click', () => {
+                    document.getElementById('fileInput').click();
+                });
                 
-                if (uploadZone && fileInput) {
-                    uploadZone.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        console.log('Upload zone clicked, opening file dialog...');
-                        fileInput.click();
-                    });
-                    
-                    fileInput.addEventListener('change', (e) => {
-                        console.log('File input changed:', e.target.files);
-                        this.handleFileUpload(e);
-                    });
-                } else {
-                    console.error('Upload elements not found:', { uploadZone, fileInput });
-                }
-                // Drag and drop with better debugging
-                if (uploadZone) {
-                    uploadZone.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        uploadZone.classList.add('dragover');
-                        console.log('Dragging over upload zone');
-                    });
-                    
-                    uploadZone.addEventListener('dragleave', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        uploadZone.classList.remove('dragover');
-                    });
-                    
-                    uploadZone.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        uploadZone.classList.remove('dragover');
-                        const files = e.dataTransfer.files;
-                        console.log('Files dropped:', files);
-                        if (files.length > 0) {
-                            this.processFile(files[0]);
-                        }
-                    });
-                }
+                document.getElementById('fileInput').addEventListener('change', (e) => {
+                    this.handleFileUpload(e);
+                });
+                
+                // Drag and drop
+                const uploadZone = document.getElementById('uploadZone');
+                
+                uploadZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploadZone.classList.add('dragover');
+                });
+                
+                uploadZone.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploadZone.classList.remove('dragover');
+                });
+                
+                uploadZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploadZone.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        this.processFile(files[0]);
+                    }
+                });
 
                 // Controls
                 const controls = ['viewAngle', 'zoomLevel', 'connectionType', 'nodeSizeBy', 'layoutStyle'];
@@ -997,22 +985,14 @@
 
             handleFileUpload(event) {
                 const file = event.target.files[0];
-                console.log('File selected:', file);
                 if (file) {
-                    console.log('Processing file:', file.name, 'Type:', file.type, 'Size:', file.size);
                     this.processFile(file);
-                } else {
-                    console.log('No file selected');
                 }
             }
 
             processFile(file) {
-                // More flexible file type checking
-                const fileName = file.name.toLowerCase();
-                const isJsonFile = fileName.endsWith('.json') || file.type === 'application/json' || file.type === 'text/plain';
-                
-                if (!isJsonFile) {
-                    alert('Please upload a JSON file. Selected file: ' + file.name + ' (Type: ' + file.type + ')');
+                if (!file.name.endsWith('.json')) {
+                    alert('Please upload a JSON file.');
                     return;
                 }
 
@@ -1022,22 +1002,13 @@
                 reader.onload = (e) => {
                     try {
                         const jsonData = JSON.parse(e.target.result);
-                        console.log('JSON data loaded successfully:', jsonData);
                         this.loadData(jsonData);
                     } catch (error) {
-                        console.error('JSON parsing error:', error);
-                        alert('Error parsing JSON file: ' + error.message + '\n\nPlease check that your file contains valid JSON.');
+                        alert('Error parsing JSON file: ' + error.message);
                     } finally {
                         this.hideProcessingIndicator();
                     }
                 };
-                
-                reader.onerror = (error) => {
-                    console.error('File reading error:', error);
-                    alert('Error reading file: ' + error.message);
-                    this.hideProcessingIndicator();
-                };
-                
                 reader.readAsText(file);
             }
 
